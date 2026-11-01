@@ -1,0 +1,30 @@
+# 所有門檻與參數集中在此，不寫死在程式裡（PLAN 第 5 節初始值，P2 回測後調整）
+db_path: data/revenue.db
+
+fetch:
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) revenue-tracker/0.1"
+  min_interval_sec: 1.0        # 一般來源請求間隔
+  mops_interval_sec: 2.0       # MOPS 請求間隔
+  retries: 3
+  backoff_sec: 5
+  timeout_sec: 30
+  history_months: 60           # 初始回補 5 年
+
+sources:
+  twse_revenue: "https://openapi.twse.com.tw/v1/opendata/t187ap05_L"
+  tpex_revenue: "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap05_O"
+  mops_history: "https://mopsov.twse.com.tw/nas/t21/{market}/t21sc03_{roc_year}_{month}.html"
+
+published_at:
+  estimate_day_of_next_month: 10   # 回補資料的公告日估計
+
+monthly_screen:
+  min_yoy_3m: 20.0             # 3 個月滾動 YoY 門檻（%）
+  min_consecutive_months: 3
+  min_monthly_revenue_k: 100000 # 千元；即 1 億元
+  low_base_ratio: 0.5          # 去年同月 < 近3年平均 × 此值 視為基期過低
+
+score_weights:
+  fundamental_momentum: 0.40
+  leading_signals: 0.30
+  not_yet_priced: 0.30
