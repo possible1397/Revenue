@@ -127,7 +127,7 @@ def score_and_select(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
 def _reasons(r) -> str:
     keys = ["ym", "revenue", "yoy", "yoy_3m", "cum_yoy", "consec_growth", "accel", "turnaround", "diffusion",
-            "high_12", "ret_3m", "gap", "s_fundamental", "s_leading", "s_unpriced"]
+            "high_12", "ret_3m", "gap", "close", "market_cap", "s_fundamental", "s_leading", "s_unpriced"]
     out = {}
     for k in keys:
         v = r[k]
