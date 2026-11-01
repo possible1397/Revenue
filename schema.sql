@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS companies (
     industry      TEXT,
     listed_date   TEXT,
     delisted_date TEXT,              -- 下市公司要保留，回測避免存活者偏誤
+    shares        INTEGER,           -- 已發行普通股數（目前值，用來估算市值）
     updated_at    TEXT NOT NULL
 );
 
@@ -59,9 +60,10 @@ CREATE TABLE IF NOT EXISTS financials (
 CREATE TABLE IF NOT EXISTS prices (
     stock_id   TEXT NOT NULL,
     date       TEXT NOT NULL,
-    close      REAL,
+    close      REAL,             -- 未還原收盤價
+    adj_close  REAL,             -- 還原收盤價（含除權息，用來算報酬）
     volume     INTEGER,
-    market_cap REAL,
+    market_cap REAL,             -- 千元；close × 目前股數估算
     PRIMARY KEY (stock_id, date)
 );
 

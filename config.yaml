@@ -13,6 +13,8 @@ fetch:
 sources:
   twse_revenue: "https://openapi.twse.com.tw/v1/opendata/t187ap05_L"
   tpex_revenue: "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap05_O"
+  twse_company: "https://openapi.twse.com.tw/v1/opendata/t187ap03_L"
+  tpex_company: "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
   mops_history: "https://mopsov.twse.com.tw/nas/t21/{market}/t21sc03_{roc_year}_{month}.html"
 
 published_at:

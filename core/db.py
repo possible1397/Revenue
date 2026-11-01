@@ -14,7 +14,17 @@ def connect(db_path=None):
     conn = sqlite3.connect(p)
     conn.row_factory = sqlite3.Row
     conn.executescript((ROOT / "schema.sql").read_text(encoding="utf-8"))
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn):
+    """既有資料庫補欄位（CREATE IF NOT EXISTS 不會改舊表）。"""
+    for table, col, decl in (("companies", "shares", "INTEGER"), ("prices", "adj_close", "REAL")):
+        cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if col not in cols:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
+    conn.commit()
 
 
 def now_iso():

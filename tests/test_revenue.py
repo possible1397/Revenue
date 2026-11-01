@@ -70,8 +70,8 @@ def test_actual_date_replaces_earlier_than_estimate(tmp_path):
 
 def test_check_flags_drop(tmp_path):
     conn = db.connect(tmp_path / "t.db")
-    conn.execute("INSERT INTO companies VALUES ('1','a','sii',NULL,NULL,NULL,'x')")
-    conn.execute("INSERT INTO companies VALUES ('2','b','sii',NULL,NULL,NULL,'x')")
+    conn.execute("INSERT INTO companies (stock_id,name,market,updated_at) VALUES ('1','a','sii','x')")
+    conn.execute("INSERT INTO companies (stock_id,name,market,updated_at) VALUES ('2','b','sii','x')")
     for ym, sids in (("2026-07", ["1", "2"]), ("2026-08", ["1"])):
         for s in sids:
             conn.execute("INSERT INTO monthly_revenue (stock_id, ym, published_at, source, updated_at) "
