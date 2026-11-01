@@ -25,6 +25,10 @@ monthly_screen:
   min_consecutive_months: 3
   min_monthly_revenue_k: 100000 # 千元；即 1 億元
   low_base_ratio: 0.5          # 去年同月 < 近3年平均 × 此值 視為基期過低
+  price_window_days: 91        # 「近 3 個月股價漲幅」的天數
+  min_gap: 0.0                 # 成長未反映：3M YoY 減 3M 股價漲幅（百分點）須大於此值
+  max_price_staleness_days: 10 # 最新股價距 as_of 超過此天數視為無股價
+  min_industry_size: 5         # 產業擴散訊號至少要有幾家公司才計算
 
 score_weights:
   fundamental_momentum: 0.40
