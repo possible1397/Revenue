@@ -1,6 +1,6 @@
 """每日排程入口（由 Windows 工作排程器呼叫，也可手動執行）。
 
-順序：月營收增量 -> 營收更正檢查（週日）-> 股數更新（週一）-> 股價增量 -> 月度指標 -> 篩選。
+順序：重訊（只有當天資料，最優先）-> 月營收增量 -> 營收更正檢查（週日）-> 股數更新（週一）-> 股價增量 -> 月度指標 -> 篩選。
 各步驟獨立：某一步失敗會記錄並繼續後面的步驟，最後以非 0 結束碼回報。
 每步驟本身都可重複執行，電腦關機漏跑的日子下次開機補跑即可（股價與營收皆從資料庫最後狀態接續）。
 
@@ -21,6 +21,11 @@ from core.config import ROOT, load_config
 
 LOCK = ROOT / "data" / "daily.lock"
 log = logging.getLogger("daily")
+
+
+def _events(cfg, conn):
+    from collectors import events
+    events.run_daily(conn, cfg)
 
 
 def _revenue(cfg, conn):
@@ -57,7 +62,7 @@ def _screen(cfg, conn):
 
 def steps(today: date, force_weekly=False):
     wd = today.weekday()  # 週一 = 0
-    out = [("revenue", _revenue)]
+    out = [("events", _events), ("revenue", _revenue)]
     if force_weekly or wd == 6:
         out.append(("recheck", _recheck))
     if force_weekly or wd == 0:

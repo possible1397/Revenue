@@ -7,9 +7,9 @@ def names(d, force=False):
 
 
 def test_weekly_steps():
-    assert names(date(2026, 11, 2)) == ["revenue", "shares", "prices", "metrics", "screen"]            # 週一
-    assert names(date(2026, 11, 3)) == ["revenue", "prices", "metrics", "screen"]                      # 週二
-    assert names(date(2026, 11, 1)) == ["revenue", "recheck", "prices", "metrics", "screen"]           # 週日
+    assert names(date(2026, 11, 2)) == ["events", "revenue", "shares", "prices", "metrics", "screen"]            # 週一
+    assert names(date(2026, 11, 3)) == ["events", "revenue", "prices", "metrics", "screen"]                      # 週二
+    assert names(date(2026, 11, 1)) == ["events", "revenue", "recheck", "prices", "metrics", "screen"]           # 週日
     assert "recheck" in names(date(2026, 11, 3), force=True) and "shares" in names(date(2026, 11, 3), force=True)
 
 
