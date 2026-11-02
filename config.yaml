@@ -17,6 +17,7 @@ sources:
   tpex_company: "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O"
   twse_material: "https://openapi.twse.com.tw/v1/opendata/t187ap04_L"
   tpex_material: "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap04_O"
+  twse_delisted: "https://openapi.twse.com.tw/v1/company/suspendListingCsvAndHtml"
   mops_history: "https://mopsov.twse.com.tw/nas/t21/{market}/t21sc03_{roc_year}_{month}.html"
 
 published_at:

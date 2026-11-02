@@ -71,14 +71,38 @@ def steps(today: date, force_weekly=False):
     return out
 
 
+def _pid_alive(pid: int) -> bool:
+    import subprocess
+    try:
+        out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True, timeout=15).stdout
+    except Exception:
+        return True   # 查不出來時保守視為仍在執行
+    return str(pid) in out
+
+
 def _acquire_lock():
+    """鎖檔記錄程序編號；該程序已不存在（被強制中斷）或鎖超過 6 小時即視為過期。"""
     if LOCK.exists():
+        try:
+            pid = int(LOCK.read_text().strip())
+        except ValueError:
+            pid = None
         age = datetime.now().timestamp() - LOCK.stat().st_mtime
-        if age < 6 * 3600:   # 6 小時內的鎖視為仍在執行
+        if pid and _pid_alive(pid) and age < 6 * 3600:
             return False
+        log.warning("發現過期的鎖檔（程序 %s 已不存在或逾時），接手執行", pid)
     LOCK.parent.mkdir(parents=True, exist_ok=True)
     LOCK.write_text(str(os.getpid()))
     return True
+
+
+def _close_interrupted(conn):
+    """取得鎖之後，仍標記為 running 的紀錄必然是上次被中斷的，標成 failed。"""
+    n = conn.execute("UPDATE job_runs SET status='failed', finished_at=?, error='interrupted' "
+                     "WHERE status='running'", (db.now_iso(),)).rowcount
+    conn.commit()
+    if n:
+        log.warning("上次執行被中斷，已將 %d 筆未完成紀錄標為 failed", n)
 
 
 def main(argv=None):
@@ -98,6 +122,7 @@ def main(argv=None):
     cfg, failed = load_config(), []
     try:
         conn = db.connect()
+        _close_interrupted(conn)
         for name, fn in steps(date.today(), args.force_weekly):
             if args.only and name not in args.only:
                 continue

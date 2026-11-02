@@ -37,7 +37,9 @@ HORIZONS = {"1個月": 30, "3個月": 91, "6個月": 182}
 
 def load_prices(conn):
     px = pd.read_sql_query("SELECT stock_id, date, adj_close FROM prices", conn)
-    return px.pivot(index="date", columns="stock_id", values="adj_close").sort_index()
+    piv = px.pivot(index="date", columns="stock_id", values="adj_close").sort_index()
+    # 下市（或停牌）後延用最後價格：持有中途下市的部位以最後成交價了結，不可默默從樣本消失
+    return piv.ffill()
 
 
 def fwd_returns(px: pd.DataFrame, as_of: str):
@@ -107,6 +109,9 @@ def collect(conn, cfg):
         if fr.empty:
             continue
         df = df.merge(fr, left_on="stock_id", right_index=True, how="left")
+        # 下市公司的產業分類來自 FinMind，與現有公司的分類不一致者視為未分類，避免拿「其他下市公司」當比較基準
+        known = set(df.loc[df["shares"].notna(), "industry"].dropna())
+        df.loc[df["shares"].isna() & ~df["industry"].isin(known), "industry"] = np.nan
         for h in HORIZONS:
             df[f"ex_{h}"] = excess(df, h)
             df[f"mx_{h}"] = df[h] - df[h].mean()

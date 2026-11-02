@@ -22,13 +22,31 @@ def test_failure_does_not_stop_later_steps(monkeypatch, tmp_path):
 
     monkeypatch.setattr(daily, "LOCK", tmp_path / "lock")
     monkeypatch.setattr(daily, "steps", lambda d, f=False: [("a", boom), ("b", lambda c, k: ran.append("b"))])
-    monkeypatch.setattr(daily.db, "connect", lambda: __import__("sqlite3").connect(":memory:"))
+    import sqlite3
+    conn = sqlite3.connect(":memory:")
+    conn.execute("CREATE TABLE job_runs (id INTEGER PRIMARY KEY, job TEXT, started_at TEXT, finished_at TEXT, status TEXT, rows INTEGER, error TEXT)")
+    monkeypatch.setattr(daily.db, "connect", lambda: conn)
     assert daily.main([]) == 1
     assert ran == ["boom", "b"]
     assert not (tmp_path / "lock").exists()    # 鎖已釋放
 
 
-def test_lock_blocks_second_run(monkeypatch, tmp_path):
+def test_lock_blocks_when_owner_alive(monkeypatch, tmp_path):
     monkeypatch.setattr(daily, "LOCK", tmp_path / "lock")
-    (tmp_path / "lock").write_text("1")
+    monkeypatch.setattr(daily, "_pid_alive", lambda pid: True)
+    (tmp_path / "lock").write_text("1234")
     assert daily.main([]) == 2
+
+
+def test_stale_lock_is_taken_over_and_interrupted_runs_closed(monkeypatch, tmp_path):
+    import sqlite3
+    monkeypatch.setattr(daily, "LOCK", tmp_path / "lock")
+    monkeypatch.setattr(daily, "_pid_alive", lambda pid: False)   # 上次的程序已被強制中斷
+    (tmp_path / "lock").write_text("1234")
+    conn = sqlite3.connect(":memory:")
+    conn.execute("CREATE TABLE job_runs (id INTEGER PRIMARY KEY, job TEXT, started_at TEXT, finished_at TEXT, status TEXT, rows INTEGER, error TEXT)")
+    conn.execute("INSERT INTO job_runs (job, started_at, status) VALUES ('shares_update','x','running')")
+    monkeypatch.setattr(daily.db, "connect", lambda: conn)
+    monkeypatch.setattr(daily, "steps", lambda d, f=False: [])
+    assert daily.main([]) == 0
+    assert conn.execute("SELECT status, error FROM job_runs").fetchone() == ("failed", "interrupted")
