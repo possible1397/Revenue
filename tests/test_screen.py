@@ -32,6 +32,7 @@ def _setup(tmp_path):
 
 def test_lists(tmp_path):
     conn, cfg = _setup(tmp_path)
+    cfg["monthly_screen"]["require_unpriced_gap"] = True
     df = sc.score_and_select(sc.build_frame(conn, "2026-11-01", cfg), cfg).set_index("stock_id")
     assert df.loc["G1", "list_type"] == sc.LIST_UNPRICED
     assert pd.isna(df.loc["G2", "list_type"])          # 成長但股價已漲過頭
@@ -53,3 +54,12 @@ def test_save_idempotent(tmp_path):
     n1 = sc.save(conn, df, "2026-11-01")
     n2 = sc.save(conn, df, "2026-11-01")
     assert n1 == n2 == conn.execute("SELECT COUNT(*) FROM screens").fetchone()[0]
+
+
+def test_default_does_not_require_gap(tmp_path):
+    conn, cfg = _setup(tmp_path)
+    assert cfg["monthly_screen"]["require_unpriced_gap"] is False
+    df = sc.score_and_select(sc.build_frame(conn, "2026-11-01", cfg), cfg).set_index("stock_id")
+    assert df.loc["G1", "list_type"] == sc.LIST_UNPRICED
+    assert df.loc["G2", "list_type"] == sc.LIST_UNPRICED     # 股價已大漲，預設仍入選
+    assert pd.isna(df.loc["L1", "list_type"])                 # 營收過小仍排除

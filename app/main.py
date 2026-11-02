@@ -19,7 +19,7 @@ from core.config import load_config  # noqa: E402
 
 BLUE = "#3987e5"      # 類別色 1（亮暗背景皆可用）
 ORANGE = "#eb6834"    # 類別色 2
-LIST_NAMES = {"growth_unpriced": "成長未反映", "growth_starting": "成長將開始"}
+LIST_NAMES = {"growth_unpriced": "月度成長股", "growth_starting": "成長將開始"}
 K_TO_YI = 1e5         # 千元 -> 億元
 
 st.set_page_config(page_title="月營收成長清單", layout="wide")

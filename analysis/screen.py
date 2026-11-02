@@ -3,7 +3,8 @@
 as_of 可指定任一日期，只使用 published_at <= as_of 的營收與 date <= as_of 的股價，回測（P2）可直接重用。
 
 兩份清單（互斥）：
-  growth_unpriced  成長未反映：月度成長條件成立，且 3M YoY − 近 3 個月股價漲幅 > min_gap
+  growth_unpriced  月度成長股（鍵值沿用舊名）：月度成長條件成立；若 require_unpriced_gap 為 true，另需
+                   3M YoY − 近 3 個月股價漲幅 > min_gap（診斷顯示此條件無加分，預設關閉）
   growth_starting  成長將開始：不符合月度成長條件，但營收拐點，或領先訊號 >= 2 個
 
 綜合分數 0–100 = 基本面動能 × 40% + 領先訊號 × 30% + 市場尚未反映 × 30%（權重見 config.yaml）。
@@ -119,7 +120,9 @@ def score_and_select(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     eligible = (df["revenue"] >= sc["min_monthly_revenue_k"]) & (df["low_base"].fillna(0) != 1)
     growth = ((df["yoy_3m"] >= sc["min_yoy_3m"]) & (df["consec_growth"] >= sc["min_consecutive_months"]) & eligible)
     df["is_growth"] = growth
-    unpriced = growth & (df["gap"] > sc["min_gap"])
+    # list_type 的鍵值 growth_unpriced 沿用（schema 的 CHECK 限制），實際意義已改為「月度成長股」；
+    # 是否再要求「股價漲幅落後」由 require_unpriced_gap 決定，預設關閉。
+    unpriced = growth & (df["gap"] > sc["min_gap"]) if sc.get("require_unpriced_gap", False) else growth
     starting = (~growth) & eligible & ((df["turnaround"] == 1) | (df["leading_count"] >= 2))
     df["list_type"] = np.where(unpriced, LIST_UNPRICED, np.where(starting, LIST_STARTING, None))
     return df
