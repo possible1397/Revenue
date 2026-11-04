@@ -178,16 +178,15 @@ def _rank_table(title, hint, d, col, label, fmt, key):
     st.markdown(f"**{title}**")
     st.caption(hint)
     t = d.sort_values(col, ascending=False).head(10).reset_index(drop=True)
-    show = pd.DataFrame({"公司": t["stock_id"] + " " + t["name"].fillna(""), "產業": t["industry"], label: t[col]})
     top = float(max(t[col].max(), 1))
-    ev = st.dataframe(
-        show, hide_index=True, width="stretch", height=390, on_select="rerun", selection_mode="single-row",
-        key=f"{key}_{st.session_state.get('nonce', 0)}",
-        column_config={label: st.column_config.ProgressColumn(format=fmt, min_value=0, max_value=top)})
-    rows = ev.selection.rows if ev and ev.selection else []
-    if rows:
-        _go("detail", t.iloc[rows[0]]["stock_id"])
-        st.rerun()
+    for i, r in t.iterrows():
+        c1, c2 = st.columns([5, 3], vertical_alignment="center")
+        if c1.button(f"{r['stock_id']} {r['name'] or ''}", key=f"{key}_{i}_{st.session_state.get('nonce', 0)}",
+                     type="tertiary", help=f"{r['industry'] or '未分類'}　點擊查看詳情"):
+            _go("detail", r["stock_id"])
+            st.rerun()
+        c2.markdown(f"**{fmt % r[col]}**　<span style='opacity:.6'>{label}</span>", unsafe_allow_html=True)
+        c2.progress(min(max(r[col] / top, 0.0), 1.0))
 
 
 def home_view():
@@ -215,15 +214,15 @@ def home_view():
     if pick:
         _go("detail", pick.split(" ")[0])
         st.rerun()
-    st.caption("也可以點排行榜每列最左邊的小方框（勾選後即進入詳情頁）。")
+    st.caption("直接點排行榜上的公司名稱，也可以進入詳情頁。")
 
     a, b, c = st.columns(3)
     with a:
-        _rank_table("成長最快", "近 3 個月營收年增率（%）", g, "yoy_3m", "3M YoY%", "%.0f", "rk_fast")
+        _rank_table("成長最快", "近 3 個月營收年增率（%）", g, "yoy_3m", "3M YoY", "%.0f%%", "rk_fast")
     with b:
-        _rank_table("營收增加最多", "單月營收比去年同月多出多少（億元）", g, "rev_add_yi", "增加(億)", "%.1f", "rk_add")
+        _rank_table("營收增加最多", "單月營收比去年同月多出多少（億元）", g, "rev_add_yi", "億元", "%.1f", "rk_add")
     with c:
-        _rank_table("連續成長最久", "營收年增率連續為正的月數", g, "consec_growth", "連續月數", "%d", "rk_long")
+        _rank_table("連續成長最久", "營收年增率連續為正的月數", g, "consec_growth", "個月", "%d", "rk_long")
 
     st.divider()
     st.markdown("**月度成長股的產業分布**")
@@ -299,7 +298,12 @@ def list_view():
 
     st.title("完整清單")
     st.caption(f"{LIST_NAMES[list_type]}：{len(d)} 檔（資料日期 {as_of}）。預設依 3M YoY 排序，點欄位標題可改排序；"
-               "點選一列查看詳細資料。")
+               "用上方搜尋框或勾選左側方框進入詳細資料。")
+    pick = st.selectbox("查看個股詳情", (d["stock_id"] + " " + d["name"].fillna("")).tolist(), index=None,
+                        placeholder="輸入代號或名稱搜尋，選定後進入詳情頁", key=f"lpick_{st.session_state.get('nonce', 0)}")
+    if pick:
+        _go("detail", pick.split(" ")[0])
+        st.rerun()
     cols = {"stock_id": "代號", "name": "名稱", "industry": "產業", "market_cap_yi": "市值(億)",
             "revenue_yi": "單月營收(億)", "yoy": "YoY%", "yoy_3m": "3M YoY%", "cum_yoy": "累計YoY%",
             "consec_growth": "連續成長月", "ret_3m": "3M股價%"}
