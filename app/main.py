@@ -209,7 +209,13 @@ def home_view():
     m[1].metric("較上次新入選", f"{new_n} 檔" if new_n is not None else "-", help=f"與 {dates[1]} 的清單比較" if len(dates) > 1 else None)
     m[2].metric("成長將開始", f"{len(s)} 檔", help="營收拐點或多個領先訊號出現，尚未達成長股門檻")
     m[3].metric("營收月份 / 資料日期", f"{ym}", f"{as_of}", delta_color="off")
-    st.caption("點選任一列即可查看該公司詳細資料。")
+    opts = (g["stock_id"] + " " + g["name"].fillna("")).tolist()
+    pick = st.selectbox("查看個股詳情", opts, index=None, placeholder="輸入代號或名稱搜尋，選定後進入詳情頁",
+                        key=f"pick_{st.session_state.get('nonce', 0)}")
+    if pick:
+        _go("detail", pick.split(" ")[0])
+        st.rerun()
+    st.caption("也可以點排行榜每列最左邊的小方框（勾選後即進入詳情頁）。")
 
     a, b, c = st.columns(3)
     with a:
