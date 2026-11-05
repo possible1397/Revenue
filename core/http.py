@@ -14,6 +14,12 @@ class PoliteSession:
         self._last = 0.0
 
     def get(self, url, **kw):
+        return self._request("GET", url, **kw)
+
+    def post(self, url, **kw):
+        return self._request("POST", url, **kw)
+
+    def _request(self, method, url, **kw):
         last_err = None
         for attempt in range(self.retries):
             wait = self.min_interval - (time.time() - self._last)
@@ -21,7 +27,7 @@ class PoliteSession:
                 time.sleep(wait)
             self._last = time.time()
             try:
-                r = self.s.get(url, timeout=self.timeout, **kw)
+                r = self.s.request(method, url, timeout=self.timeout, **kw)
                 if r.status_code == 200:
                     return r
                 last_err = f"HTTP {r.status_code}"
@@ -29,6 +35,6 @@ class PoliteSession:
                     break  # 找不到不用重試
             except requests.RequestException as e:
                 last_err = repr(e)
-            log.warning("GET %s 失敗（%s），第 %d 次", url, last_err, attempt + 1)
+            log.warning("%s %s 失敗（%s），第 %d 次", method, url, last_err, attempt + 1)
             time.sleep(self.backoff * (attempt + 1))
-        raise RuntimeError(f"GET {url} 失敗：{last_err}")
+        raise RuntimeError(f"{method} {url} 失敗：{last_err}")

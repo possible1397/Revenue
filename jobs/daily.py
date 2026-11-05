@@ -33,6 +33,11 @@ def _revenue(cfg, conn):
     revenue.run_daily(conn, cfg)
 
 
+def _financials(cfg, conn):
+    from collectors import financials
+    financials.run_daily(conn, cfg)
+
+
 def _recheck(cfg, conn):
     from collectors import revenue
     revenue.run_history(conn, cfg, 3, skip_existing=False, job="revenue_recheck")
@@ -62,7 +67,7 @@ def _screen(cfg, conn):
 
 def steps(today: date, force_weekly=False):
     wd = today.weekday()  # 週一 = 0
-    out = [("events", _events), ("revenue", _revenue)]
+    out = [("events", _events), ("revenue", _revenue), ("financials", _financials)]
     if force_weekly or wd == 6:
         out.append(("recheck", _recheck))
     if force_weekly or wd == 0:
