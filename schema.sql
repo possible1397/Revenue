@@ -125,3 +125,19 @@ CREATE TABLE IF NOT EXISTS job_runs (
     rows        INTEGER,
     error       TEXT
 );
+
+-- 現況合理價（TTM EPS × 自身歷史本益比）；回測未證明低於合理價有超額報酬，僅作估值參考（docs/valuation_report.md）
+CREATE TABLE IF NOT EXISTS valuation (
+    stock_id  TEXT NOT NULL,
+    as_of     TEXT NOT NULL,
+    price     REAL,
+    ttm_eps   REAL,
+    pe        REAL,
+    pe_med    REAL,
+    fair_low  REAL,
+    fair_mid  REAL,
+    fair_high REAL,
+    discount  REAL,
+    n_hist    INTEGER,
+    PRIMARY KEY (stock_id, as_of)
+);

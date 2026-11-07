@@ -72,10 +72,10 @@ def rolling_pe_stats(pe: pd.DataFrame):
     return (hist.median(), hist.quantile(0.25), hist.quantile(0.75), hist.count())
 
 
-def build_panel(conn, first="2021-04"):
+def build_panel(conn, first="2021-04", dates=None):
     _, single = load_financials(conn)
     prices = load_prices(conn)
-    dates = month_dates(first)
+    dates = dates or month_dates(first)
     eps_rows, px_rows = {}, {}
     for d in dates:
         e = ttm_eps(single["EPS"], d)
@@ -98,6 +98,29 @@ def build_panel(conn, first="2021-04"):
     long["fair_high"] = long["ttm_eps"] * long["pe_p75"]
     long["discount"] = long["price"] / long["fair_mid"] - 1
     return long
+
+
+def current_dates(today):
+    """歷史用每月 11 日（<= today），最後加上 today 本身（當天的估值）。"""
+    ds = [d for d in month_dates("2021-04", today[:7]) if d < today]
+    return ds + [today]
+
+
+def run(conn, cfg=None, today=None):
+    """計算今天的合理價並寫入 valuation 表（同一天重跑會覆寫）。"""
+    today = today or pd.Timestamp.today().strftime("%Y-%m-%d")
+    with db.job_run(conn, "valuation") as info:
+        panel = build_panel(conn, dates=current_dates(today))
+        cur = panel[panel["as_of"] == today]
+        conn.execute("DELETE FROM valuation WHERE as_of=?", (today,))
+        conn.executemany(
+            "INSERT INTO valuation (stock_id, as_of, price, ttm_eps, pe, pe_med, fair_low, fair_mid, fair_high, discount, n_hist) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            [(r.stock_id, today, r.price, r.ttm_eps, r.pe, r.pe_med, r.fair_low, r.fair_mid, r.fair_high, r.discount,
+              int(r.n_hist)) for r in cur.itertuples()])
+        conn.commit()
+        info["rows"] = len(cur)
+    return len(cur)
 
 
 def ic_series(d, col, y):

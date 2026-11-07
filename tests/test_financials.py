@@ -45,3 +45,17 @@ def test_upsert_keeps_earliest_published_and_counts_revisions(tmp_path):
     assert fin.upsert(conn, [("1", "2026Q3", "Revenue", 110.0)], "twse_openapi", "2026-11-20") == (0, 1)
     v, pub = conn.execute("SELECT value, published_at FROM financials").fetchone()
     assert v == 110.0 and pub == "2026-11-05"
+
+
+def test_valuation_latest_filed_and_rolling():
+    import numpy as np
+    import pandas as pd
+    from analysis import valuation as v
+    assert v.latest_filed("2026-05-11") == (2025, 4)       # Q1 期限 5/15 尚未到
+    assert v.latest_filed("2026-11-11") == (2026, 2)       # Q3 期限 11/14 尚未到
+    assert v.latest_filed("2026-11-14") == (2026, 3)
+    assert v.latest_filed("2026-03-31") == (2025, 4)
+    pe = pd.DataFrame({"a": np.arange(1.0, 41.0)})
+    med, p25, p75, n = v.rolling_pe_stats(pe)
+    assert np.isnan(med["a"].iloc[17]) and not np.isnan(med["a"].iloc[18])          # 前面不足 18 筆不算
+    assert n["a"].iloc[39] == 36 and med["a"].iloc[39] == pd.Series(np.arange(4.0, 40.0)).median()   # 只用「之前」36 筆

@@ -158,6 +158,30 @@ def load_events(stock_id, mt):
             c, params=(stock_id,))
 
 
+@st.cache_data(show_spinner=False)
+def load_valuation(stock_id, mt):
+    with _conn() as c:
+        return pd.read_sql_query("SELECT * FROM valuation WHERE stock_id=? ORDER BY as_of DESC LIMIT 1", c,
+                                 params=(stock_id,))
+
+
+def valuation_block(stock_id):
+    st.markdown("**估值參考：近四季 EPS × 自身歷史本益比**")
+    v = load_valuation(stock_id, _mtime())
+    if v.empty:
+        st.caption("無法估算：近四季 EPS 不是正數、財報不足四季，或股價歷史不足 18 個月。")
+        return
+    r = v.iloc[0]
+    m = st.columns(5)
+    m[0].metric("現價", f"{r['price']:.1f}")
+    m[1].metric("合理價（中）", f"{r['fair_mid']:.1f}", help="近四季 EPS × 過去最多 36 個月的本益比中位數")
+    m[2].metric("合理價範圍", f"{r['fair_low']:.0f} ~ {r['fair_high']:.0f}", help="本益比 25 ~ 75 百分位")
+    m[3].metric("現價相對合理價", f"{r['discount']:+.0%}", help="負 = 低於合理價")
+    m[4].metric("本益比 現在 / 歷史中位", f"{r['pe']:.1f} / {r['pe_med']:.1f}")
+    st.caption(f"近四季 EPS {r['ttm_eps']:.2f}（截至 {r['as_of']}）。**僅供估值參考**：回測（2023-05 ~ 2026-10）顯示，"
+               "『低於合理價』在月度成長股中沒有帶來較好的後續報酬，不要把它當成買進訊號。詳見 docs/valuation_report.md。")
+
+
 def _go(view, stock=None):
     st.session_state["view"] = view
     st.session_state["stock"] = stock
@@ -258,6 +282,7 @@ def detail_view():
     flags = [n for n, k in (("成長加速", "accel"), ("營收拐點", "turnaround"), ("產業擴散", "diffusion"),
                             ("創 12 個月新高", "high_12")) if r.get(k) == 1]
     st.write("訊號：" + ("、".join(flags) if flags else "無"))
+    valuation_block(sid)
 
     left, right = st.columns([3, 2])
     with left:

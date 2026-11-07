@@ -55,6 +55,11 @@ def _prices(cfg, conn):
         log.warning("股價失敗 %d 檔（下次執行會重試）", len(failed))
 
 
+def _valuation(cfg, conn):
+    from analysis import valuation
+    valuation.run(conn, cfg)
+
+
 def _metrics(cfg, conn):
     from analysis import metrics
     metrics.run(conn, cfg)
@@ -72,7 +77,7 @@ def steps(today: date, force_weekly=False):
         out.append(("recheck", _recheck))
     if force_weekly or wd == 0:
         out.append(("shares", _shares))
-    out += [("prices", _prices), ("metrics", _metrics), ("screen", _screen)]
+    out += [("prices", _prices), ("valuation", _valuation), ("metrics", _metrics), ("screen", _screen)]
     return out
 
 
